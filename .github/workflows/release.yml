@@ -51,7 +51,9 @@ jobs:
             publishReleasePublicationToMavenCentralRepository
       - name: Transfer deployment to Central Portal
         run: |
+          authorization=$(printf '%s' "$MAVEN_CENTRAL_USERNAME:$MAVEN_CENTRAL_PASSWORD" \
+            | base64 | tr -d '\n')
           curl --fail-with-body --silent --show-error \
-            --user "$MAVEN_CENTRAL_USERNAME:$MAVEN_CENTRAL_PASSWORD" \
+            --header "Authorization: Bearer $authorization" \
             --request POST \
             'https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/io.github.dkaukov?publishing_type=automatic'
