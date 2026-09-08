@@ -6,6 +6,7 @@ import java.util.Objects;
 public final class Codec2 implements AutoCloseable {
     public static final int PCM_SAMPLES = 320;
     public static final int FRAME_BYTES = 7;
+    private static final String FRAME_PARAMETER = "frame";
 
     static {
         System.loadLibrary("codec2-android");
@@ -23,13 +24,13 @@ public final class Codec2 implements AutoCloseable {
     public synchronized void encode(short[] pcm, byte[] frame) {
         requireOpen();
         requireLength(Objects.requireNonNull(pcm, "pcm"), PCM_SAMPLES, "pcm");
-        requireLength(Objects.requireNonNull(frame, "frame"), FRAME_BYTES, "frame");
+        requireLength(Objects.requireNonNull(frame, FRAME_PARAMETER), FRAME_BYTES, FRAME_PARAMETER);
         nativeEncode(handle, pcm, frame);
     }
 
     public synchronized void decode(byte[] frame, short[] pcm) {
         requireOpen();
-        requireLength(Objects.requireNonNull(frame, "frame"), FRAME_BYTES, "frame");
+        requireLength(Objects.requireNonNull(frame, FRAME_PARAMETER), FRAME_BYTES, FRAME_PARAMETER);
         requireLength(Objects.requireNonNull(pcm, "pcm"), PCM_SAMPLES, "pcm");
         nativeDecode(handle, frame, pcm);
     }

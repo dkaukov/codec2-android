@@ -23,7 +23,7 @@ jobs:
           distribution: zulu
           java-version: 17
           cache: gradle
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
       - name: Install Android native build tools
         run: sdkmanager 'platforms;android-36' 'ndk;27.0.12077973' 'cmake;3.22.1'
       - name: Build, test, lint, and verify release AAR
@@ -70,7 +70,7 @@ jobs:
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - uses: reactivecircus/android-emulator-runner@v2
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
           api-level: 35
           arch: x86_64
