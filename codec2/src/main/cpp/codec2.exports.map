@@ -1,0 +1,9 @@
+{
+  global:
+    codec2_create;
+    codec2_destroy;
+    codec2_encode;
+    codec2_decode;
+  local:
+    *;
+};

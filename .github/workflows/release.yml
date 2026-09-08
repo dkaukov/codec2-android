@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish (without v)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+      MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+      SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+      SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+          cache: gradle
+      - uses: android-actions/setup-android@v3
+      - name: Install Android native build tools
+        run: sdkmanager 'platforms;android-36' 'ndk;27.0.12077973' 'cmake;3.22.1'
+      - name: Select version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            version=${GITHUB_REF_NAME#v}
+          else
+            version=$INPUT_VERSION
+          fi
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Build, test, sign, and upload
+        env:
+          ORG_GRADLE_PROJECT_VERSION_NAME: ${{ steps.version.outputs.version }}
+        run: |
+          ./gradlew --stacktrace clean test verifyReleaseAar \
+            publishReleasePublicationToMavenCentralRepository
+      - name: Transfer deployment to Central Portal
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --user "$MAVEN_CENTRAL_USERNAME:$MAVEN_CENTRAL_PASSWORD" \
+            --request POST \
+            'https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/io.github.dkaukov?publishing_type=automatic'

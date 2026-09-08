@@ -1,0 +1,15 @@
+codec2-android
+==============
+
+Copyright 2026 Dmitry Kaukov
+
+This product includes Codec2 1.2.0 from https://github.com/drowe67/codec2,
+licensed under the GNU Lesser General Public License version 2.1.
+
+Codec2 source corresponding to the bundled binaries is available from:
+https://github.com/drowe67/codec2/tree/06d4c11e699b0351765f10398abb4f663a984f36
+
+The exact source list, build flags, generated-codebook inputs, and Android NDK
+build procedure are recorded in codec2/src/main/cpp/CMakeLists.txt in this
+repository. The AAR keeps Codec2 in a separate libcodec2.so so recipients can
+rebuild and replace that library independently of libcodec2-android.so.
