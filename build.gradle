@@ -1,3 +1,14 @@
 plugins {
     id 'com.android.library' version '9.0.1' apply false
+    id 'org.sonarqube' version '7.5.0.8588'
+}
+
+sonar {
+    properties {
+        property 'sonar.projectKey', 'dkaukov_codec2-android'
+        property 'sonar.organization', 'dkaukov'
+        property 'sonar.host.url', 'https://sonarcloud.io'
+        property 'sonar.coverage.jacoco.xmlReportPaths',
+                'codec2/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml'
+    }
 }

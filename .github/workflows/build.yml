@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -15,6 +16,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: zulu
@@ -23,10 +26,27 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install Android native build tools
         run: sdkmanager 'platforms;android-36' 'ndk;27.0.12077973' 'cmake;3.22.1'
-      - name: Build, test, and verify release AAR
-        run: ./gradlew --stacktrace test verifyReleaseAar
+      - name: Build, test, lint, and verify release AAR
+        run: ./gradlew --stacktrace clean test lint jacocoTestReport verifyReleaseAar publishReleasePublicationToMavenLocal
       - name: Inspect packaged native libraries
         run: ./scripts/inspect-aar.sh
+      - name: Check SonarCloud availability
+        id: sonar
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: test -n "$SONAR_TOKEN" && echo 'enabled=true' >> "$GITHUB_OUTPUT" || true
+      - name: Cache SonarQube packages
+        if: steps.sonar.outputs.enabled == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: Analyze with SonarCloud
+        if: steps.sonar.outputs.enabled == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew sonar -Dsonar.token="$SONAR_TOKEN"
       - uses: actions/upload-artifact@v4
         with:
           name: codec2-android-aar
@@ -37,6 +57,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: zulu
