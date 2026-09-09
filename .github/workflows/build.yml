@@ -30,6 +30,22 @@ jobs:
         run: ./gradlew --stacktrace clean test lint jacocoTestReport verifyReleaseAar publishReleasePublicationToMavenLocal
       - name: Inspect packaged native libraries
         run: ./scripts/inspect-aar.sh
+      - name: Check snapshot publishing availability
+        if: github.event_name == 'push'
+        id: snapshot
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: |
+          test -n "$MAVEN_CENTRAL_USERNAME" \
+            && test -n "$MAVEN_CENTRAL_PASSWORD" \
+            && echo 'enabled=true' >> "$GITHUB_OUTPUT" || true
+      - name: Publish snapshot to Maven Central
+        if: steps.snapshot.outputs.enabled == 'true'
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+        run: ./gradlew --stacktrace publishReleasePublicationToMavenCentralSnapshotsRepository
       - name: Check SonarCloud availability
         id: sonar
         env:

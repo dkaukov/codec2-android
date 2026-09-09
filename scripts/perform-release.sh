@@ -58,9 +58,9 @@ if [[ -x .private/publish.sh ]]; then
   exit 0
 fi
 
-git tag -a "$tag" -m "codec2-android $version"
-git push origin "$tag"
-echo "No private local publisher found. Waiting for the GitHub release workflow."
+echo "Local release publisher not found and GitHub release publishing is disabled." >&2
+echo "Restore executable .private/publish.sh before performing a release." >&2
+exit 1
 
 api_url="https://api.github.com/repos/dkaukov/codec2-android/actions/runs?event=push&head_sha=$release_commit"
 deadline=$((SECONDS + 1800))

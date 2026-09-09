@@ -1,75 +1,13 @@
-name: Release
+name: Release (disabled)
 
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: maven-central-release
-  cancel-in-progress: false
-
 jobs:
-  detect-publish-mode:
+  disabled:
     runs-on: ubuntu-latest
-    outputs:
-      publish: ${{ steps.mode.outputs.publish }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Detect locally published release
-        id: mode
-        run: |
-          if git for-each-ref --format='%(contents)' "refs/tags/$GITHUB_REF_NAME" \
-              | grep -Fq '[published-locally]'; then
-            echo 'publish=false' >> "$GITHUB_OUTPUT"
-          else
-            echo 'publish=true' >> "$GITHUB_OUTPUT"
-          fi
-
-  publish:
-    needs: detect-publish-mode
-    if: needs.detect-publish-mode.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: maven-central
-    env:
-      MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-      MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-      SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-      SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: zulu
-          java-version: 17
-          cache: gradle
-      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
-      - name: Install Android native build tools
-        run: sdkmanager 'platforms;android-36' 'ndk;27.0.12077973' 'cmake;3.22.1'
-      - name: Select version
-        id: version
-        run: |
-          [[ "$GITHUB_REF_TYPE" == tag ]]
-          version=${GITHUB_REF_NAME#v}
-          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - name: Build, test, sign, and upload
-        env:
-          ORG_GRADLE_PROJECT_VERSION_NAME: ${{ steps.version.outputs.version }}
-        run: |
-          ./gradlew --stacktrace clean test lint verifyReleaseAar \
-            publishReleasePublicationToMavenCentralRepository
-          ./scripts/inspect-aar.sh
-      - name: Transfer deployment to Central Portal
-        run: |
-          authorization=$(printf '%s' "$MAVEN_CENTRAL_USERNAME:$MAVEN_CENTRAL_PASSWORD" \
-            | base64 | tr -d '\n')
-          curl --fail-with-body --silent --show-error \
-            --header "Authorization: Bearer $authorization" \
-            --request POST \
-            'https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/io.github.dkaukov?publishing_type=automatic'
+      - run: echo 'Release publishing is disabled; use local .private/publish.sh for now.'
