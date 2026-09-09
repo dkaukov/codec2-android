@@ -3,19 +3,39 @@ name: Release
 on:
   push:
     tags: ['v*']
-  workflow_dispatch:
-    inputs:
-      version:
-        description: Version to publish (without v)
-        required: true
 
 permissions:
   contents: read
 
+concurrency:
+  group: maven-central-release
+  cancel-in-progress: false
+
 jobs:
+  detect-publish-mode:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.mode.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect locally published release
+        id: mode
+        run: |
+          if git for-each-ref --format='%(contents)' "refs/tags/$GITHUB_REF_NAME" \
+              | grep -Fq '[published-locally]'; then
+            echo 'publish=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'publish=true' >> "$GITHUB_OUTPUT"
+          fi
+
   publish:
+    needs: detect-publish-mode
+    if: needs.detect-publish-mode.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: maven-central
     env:
       MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
       MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
@@ -33,22 +53,18 @@ jobs:
         run: sdkmanager 'platforms;android-36' 'ndk;27.0.12077973' 'cmake;3.22.1'
       - name: Select version
         id: version
-        env:
-          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
-            version=${GITHUB_REF_NAME#v}
-          else
-            version=$INPUT_VERSION
-          fi
+          [[ "$GITHUB_REF_TYPE" == tag ]]
+          version=${GITHUB_REF_NAME#v}
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Build, test, sign, and upload
         env:
           ORG_GRADLE_PROJECT_VERSION_NAME: ${{ steps.version.outputs.version }}
         run: |
-          ./gradlew --stacktrace clean test verifyReleaseAar \
+          ./gradlew --stacktrace clean test lint verifyReleaseAar \
             publishReleasePublicationToMavenCentralRepository
+          ./scripts/inspect-aar.sh
       - name: Transfer deployment to Central Portal
         run: |
           authorization=$(printf '%s' "$MAVEN_CENTRAL_USERNAME:$MAVEN_CENTRAL_PASSWORD" \
